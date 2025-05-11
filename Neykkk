@@ -1,0 +1,204 @@
+--[[
+    Script de Aimbot e ESP para Testes e Detecção
+    Gerado em: 10/05/2024
+    Autor: Gemini
+    Descrição: Este script simula funcionalidades de Aimbot e ESP para fins de teste e detecção de jogadores que utilizam scripts.
+    IMPORTANTE: sin
+--]]
+
+-- Configurações Globais (Simuladas)
+local game = {
+    GetPlayers = function()
+        -- Retorna uma lista simulada de jogadores.
+        local players = {}
+        for i = 1, 10 do  -- Simula 10 jogadores
+            table.insert(players, {
+                id = i,
+                name = "Player" .. i,
+                health = math.random(1, 100),
+                team = math.random(1, 2), -- Simula 2 times
+                position = {x = math.random(-100, 100), y = math.random(-100, 100), z = math.random(-100, 100)},
+                isVisible = math.random(0,1) == 1,
+                distance = function(self, other)
+                    -- Simula o cálculo da distância entre dois jogadores
+                    local dx = self.position.x - other.position.x
+                    local dy = self.position.y - other.position.y
+                    local dz = self.position.z - other.position.z
+                    return math.sqrt(dx*dx + dy*dy + dz*dz)
+                end,
+                getName = function(self) return self.name end,
+                getHealth = function(self) return self.health end,
+                getTeam = function(self) return self.team end,
+                getPosition = function(self) return self.position.x, self.position.y, self.position.z end,
+                IsVisible = function(self) return self.isVisible end
+            })
+        end
+        return players
+    end,
+    GetLocalPlayer = function()
+        -- Retorna um jogador local simulado.
+        return {
+            id = 1,
+            name = "LocalPlayer",
+            health = 100,
+            team = 1,
+            position = {x = 0, y = 0, z = 0},
+             distance = function(self, other)
+                    -- Simula o cálculo da distância entre dois jogadores
+                    local dx = self.position.x - other.position.x
+                    local dy = self.position.y - other.position.y
+                    local dz = self.position.z - other.position.z
+                    return math.sqrt(dx*dx + dy*dy + dz*dz)
+                end,
+            getName = function(self) return self.name end,
+            getHealth = function(self) return self.health end,
+            getTeam = function(self) return self.team end,
+            getPosition = function(self) return self.position.x, self.position.y, self.position.z end,
+        }
+    end,
+    SetViewAngles = function(x, y, z)
+        -- Simula a definição dos ângulos de visão do jogador.
+        -- print(string.format("Definindo ângulos de visão: x=%f, y=%f, z=%f", x, y, z))
+    end,
+     drawText = function(text, x, y, color)
+        -- Simula o desenho de texto na tela.
+        -- print(string.format("Desenhando texto: %s em x=%f, y=%f, cor=%s", text, x, y, color))
+    end,
+    drawWireframeBox = function(x, y, z, width, height, depth)
+        -- Simula o desenho de uma caixa na tela
+         -- print(string.format("Desenhando WireframeBox em x=%f, y=%f, z=%f, width = %f, height=%f, depth=%f", x, y, z, width, height, depth))
+    end,
+    drawColor = function(r, g, b, a)
+       --Simula a definição de uma cor
+       --print(string.format("Desenhando Cor R=%f G=%f B=%f A=%f",r,g,b,a))
+    end
+}
+
+-- Cores (Simuladas)
+local color_white = {r = 255, g = 255, b = 255}
+local color_green = {r = 0, g = 255, b = 0}
+local color_red = {r = 255, g = 0, b = 0}
+local color_blue = {r = 0, g = 0, b = 255}
+local color_yellow = {r= 255, g=255, b=0}
+
+-- 1. Configuração do Aimbot
+local aimbot = {
+    enabled = true,
+    autoAim = true,
+    targetSelection = "closest", -- "closest", "healthiest", "lowestHealth"
+    teamCheck = true,
+    fov = 100, -- Campo de visão em graus
+    smooth = 10, -- Suavização da mira
+}
+
+-- 2. Configuração do ESP
+local esp = {
+    enabled = true,
+    showBox = true,
+    showName = true,
+    showHealth = true,
+    teamCheck = true,
+    showDistance = true,
+}
+
+-- 3. Funções do Aimbot (Simuladas)
+local function findTarget()
+    if not aimbot.enabled then return nil end
+
+    local bestTarget = nil
+    local localPlayer = game.GetLocalPlayer()
+    local localTeam = localPlayer:getTeam()
+    local closestDistance = 99999
+    local highestHealth = -1
+    local lowestHealth = 99999
+
+    for i, player in ipairs(game.GetPlayers()) do
+        if player ~= localPlayer then
+            local playerTeam = player:getTeam()
+            local distance = localPlayer:distance(player)
+            local playerHealth = player:getHealth()
+
+            if not aimbot.teamCheck or playerTeam ~= localTeam then
+                if distance <= aimbot.fov then
+                    if aimbot.targetSelection == "closest" then
+                        if distance < closestDistance then
+                            closestDistance = distance
+                            bestTarget = player
+                        end
+                    elseif aimbot.targetSelection == "healthiest" then
+                        if playerHealth > highestHealth then
+                            highestHealth = playerHealth
+                            bestTarget = player
+                        end
+                    elseif aimbot.targetSelection == "lowestHealth" then
+                        if playerHealth < lowestHealth then
+                            lowestHealth = playerHealth
+                            bestTarget = player
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return bestTarget
+end
+
+local function aim()
+    if not aimbot.enabled or not aimbot.autoAim then return end
+
+    local target = findTarget()
+    if target then
+        local targetX, targetY, targetZ = target:getPosition()
+        local localPlayerX, localPlayerY, localPlayerZ = game.GetLocalPlayer():getPosition()
+
+        local aimX = localPlayerX + (targetX - localPlayerX) / (aimbot.smooth + 1)
+        local aimY = localPlayerY + (targetY - localPlayerY) / (aimbot.smooth + 1)
+        local aimZ = localPlayerZ + (targetZ - localPlayerZ) / (aimbot.smooth + 1)
+
+        game.SetViewAngles(aimX, aimY, aimZ)
+    end
+end
+
+-- 4. Funções do ESP (Simuladas)
+local function drawESP()
+    if not esp.enabled then return end
+
+    local localPlayer = game.GetLocalPlayer()
+    local localTeam = localPlayer:getTeam()
+
+    for i, player in ipairs(game.GetPlayers()) do
+        if player ~= localPlayer then
+            local playerName = player:getName()
+            local playerHealth = player:getHealth()
+            local playerTeam = player:getTeam()
+            local x, y, z = player:getPosition()
+            local isVisible = player:IsVisible()
+            local distance = localPlayer:distance(player)
+
+            if not esp.teamCheck or playerTeam ~= localTeam then
+                if esp.showBox then
+                    game.drawColor(isVisible and 0 or 255, isVisible and 255 or 0, 0, 255) -- Verde se visível, vermelho se não
+                    game.drawWireframeBox(x, y, z, 20, 40, 20) -- Tamanho do box simulado
+                end
+                if esp.showName then
+                    game.drawText(playerName, x, y - 10, color_white)
+                end
+                if esp.showHealth then
+                    game.drawText("HP: " .. playerHealth, x, y + 50, color_green)
+                end
+                if esp.showDistance then
+                    game.drawText("Dist: " .. distance, x, y + 60, color_yellow)
+                end
+            end
+        end
+    end
+end
+
+-- 5. Chamadas das Funções (Simuladas)
+if aimbot.enabled and aimbot.autoAim then
+    aimbot.aim()
+end
+
+if esp.enabled then
+    drawESP()
+end
